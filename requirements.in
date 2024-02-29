@@ -1,0 +1,14 @@
+black[jupyter]
+earthengine-api
+gdal==3.5.2
+geopandas
+geowrangler
+jupyterlab
+loguru
+numpy
+pandas
+matplotlib
+pre-commit
+pytest
+rasterio
+rasterstats

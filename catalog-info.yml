@@ -1,0 +1,74 @@
+# See https://backstage.io/docs/features/software-catalog/descriptor-format for full catalog-info.yml configurations.
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: geo-python-starter
+  title: Geospatial Python Starter
+  description: Base template for all repositories for generic geospatial analytics/ML work that uses python.
+  annotations:
+    github.com/project-slug: thinkingmachines/geo-python-starter
+  tags: # see doc for list of tags: https://docs.google.com/document/d/1PT97wDuj31BZo87SKSw0YSPvRVzunh1lAJ4I4nPctBI/edit#heading=h.u8qvx8avf6he
+    - internal
+    - geo-analytics
+    - geo-ai
+    - python
+  links:
+    - url: https://thinkdatasci.slack.com/archives/C04AQQGCVNK
+      title: Slack - Geo team 2023 reboot Channel
+      icon: chat # see https://backstage.io/docs/reference/core-app-api.appicons for all icons
+#     - url: 
+#       title: Wiki
+#       icon: docs
+spec:
+  owner: Geospatial
+  type: internal
+  lifecycle: development
+  parameters:
+    - title: Create a new geo-python-starter repository
+      required:
+        - repoUrl
+        - description
+      properties:
+        repoUrl:
+          title: Repository Name
+          type: string
+          ui:field: RepoUrlPicker
+          ui:options:
+            allowedHosts:
+              - github.com
+            allowedOwners:
+              - thinkingmachines
+        description:
+          title: Repository Description
+          type: string
+          description: Describe repository in 1 to 2 sentences
+          ui:autofocus: true
+  #only needed for component: Template types of repos
+  steps:
+    - id: fetch-base
+      name: Fetch Base
+      action: fetch:template
+      input:
+        url: .
+        values:
+          owner: thinkingmachines
+  
+    - id: publish
+      name: Publish
+      action: publish:github
+      input:
+        allowedHosts: ['github.com']
+        description: 
+        repoUrl: 
+        gitAuthorName: 
+        gitAuthorEmail: 
+        collaborators:
+        - user: 
+          access: admin
+  
+    - id: register
+      name: Register
+      action: catalog:register
+      input:
+        repoContentsUrl: 
+        catalogInfoPath: '/catalog-info.yml'

@@ -1,32 +1,116 @@
-[tool.black]
+[build-system]
+requires = ["setuptools >= 69.2.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "climate-downscaling"
+# version = "Insert version here"
+description = "Climate downscaling phase of the Lacuna Fund climate health project"
+# authors = [ {name = "My Name", email = "myemail@example.com"}, ]
+requires-python = ">= 3.10"
+readme = "README.md"
+dependencies = [
+  "cartopy",
+  "cdsapi",
+  "cfgrib",
+  "climetlab",
+  "dl4ds @ git+ssh://git@github.com/SKB-7/dl4ds.git#main", #patch to dl4ds due to https://github.com/carlos-gg/dl4ds/issues/10
+  "earthaccess",
+  "earthengine-api",
+  "eccodes==1.3.1",
+  "fiona",
+  "gdal==3.5.2",
+  "geopandas<1.0",
+  "geowrangler==0.1.1",
+  "jupyterlab",
+  "loguru",
+  "matplotlib",
+  "netCDF4",
+  "netcdf4",
+  "numpy<2.0",
+  "pandas==1.5.3",
+  "pre-commit",
+  "pygeos",
+  "pytest",
+  "rasterio",
+  "rasterstats",
+  "rioxarray",
+  "rtree",
+  "ruff",
+  "scikit-learn",
+  "tensorflow",
+  "xarray[complete]==2023.10.1",
+  "xesmf",
+]
+
+[project.urls]
+Repository = "https://github.com/thinkingmachines/geo-site-selection-data-template"
+Wiki = "https://github.com/thinkingmachines/geo-site-selection-data-template/wiki"
+
+[tool.ruff]
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pyenv",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    ".vscode",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "site-packages",
+    "venv",
+]
+
+# Same as Black.
 line-length = 88
-include = '\.pyi?$'
-exclude = '''
-(
-  /(
-      \.eggs         # exclude a few common directories in the
-    | \.git          # root of the project
-    | \.hg
-    | \.mypy_cache
-    | \.tox
-    | \.venv
-    | _build
-    | buck-out
-    | build
-    | dist
-  )/
-  | foo.py           # also separately exclude a file named foo.py in
-                     # the root of the project
-)
-'''
+indent-width = 4
 
-[tool.isort]
-# for compatibility with black
-# https://black.readthedocs.io/en/stable/the_black_code_style.html?highlight=isort#how-black-wraps-lines
+# Assume Python 3.10
+target-version = "py310"
 
-multi_line_output = 3
-include_trailing_comma = "True"
-force_grid_wrap = 0
-use_parentheses = "True"
-ensure_newline_before_comments = "True"
-line_length = 88
+# Discover Jupyter Notebooks
+extend-include = ["*.ipynb"]
+
+[tool.ruff.format]
+# Like Black, use double quotes for strings.
+quote-style = "double"
+
+# Like Black, indent with spaces, rather than tabs.
+indent-style = "space"
+
+# Like Black, respect magic trailing commas.
+skip-magic-trailing-comma = false
+
+# Like Black, automatically detect the appropriate line ending.
+line-ending = "auto"
+
+# Enable auto-formatting of code examples in docstrings. Markdown,
+# reStructuredText code/literal blocks and doctests are all supported.
+#
+# This is currently disabled by default, but it is planned for this
+# to be opt-out in the future.
+docstring-code-format = false
+
+# Set the line length limit used when formatting code snippets in
+# docstrings.
+#
+# This only has an effect when the `docstring-code-format` setting is
+# enabled.
+docstring-code-line-length = "dynamic"

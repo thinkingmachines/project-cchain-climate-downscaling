@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "climate-downscaling"
 # version = "Insert version here"
-description = "Climate downscaling phase of the Lacuna Fund climate health project"
+description = "Climate downscaling POC for the Lacuna Fund linked dataset"
 # authors = [ {name = "My Name", email = "myemail@example.com"}, ]
 requires-python = ">= 3.10"
 readme = "README.md"

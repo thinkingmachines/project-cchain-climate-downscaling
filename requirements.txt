@@ -220,7 +220,7 @@ future==0.18.2
     # via earthengine-api
 gast==0.4.0
     # via tensorflow
-gdal==3.5.2
+gdal==3.9.1
 geopandas==0.10.2
     # via geowrangler
 geoviews==1.9.6

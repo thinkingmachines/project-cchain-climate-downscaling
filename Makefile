@@ -5,21 +5,18 @@
 help:
 	@awk -F ':.*?## ' '/^[a-zA-Z]/ && NF==2 {printf "\033[36m  %-25s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-conda-env:
+env:
 	conda env create -f environment.yml --no-default-packages
 
-mamba-env:
-	mamba env create -f environment.yml --no-default-packages
-
 setup:
-	conda install -c conda-forge gdal=3.5.2 -y
-	pip install pip-tools
-	pip-sync requirements.txt
+	conda install -c conda-forge gdal -y
+	pip install uv
+	uv pip sync requirements.txt
 	pre-commit install
 
 requirements:
-	pip-compile requirements.in -o requirements.txt -v
-	pip-sync requirements.txt
+	uv pip compile pyproject.toml -o requirements.txt -v
+	uv pip sync requirements.txt
 
 test:
 	pytest -v tests/

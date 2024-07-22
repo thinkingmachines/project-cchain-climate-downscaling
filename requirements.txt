@@ -77,6 +77,8 @@ certifi==2022.6.15.1
     #   pyproj
     #   rasterio
     #   requests
+cf-xarray==0.9.0
+    # via xesmf
 cffi==1.15.1
     # via
     #   argon2-cffi-bindings
@@ -163,7 +165,9 @@ fiona==1.8.21
     #   geopandas
     #   rasterstats
 flox==0.8.8
-    # via xarray
+    # via
+    #   xarray
+    #   xarray-regrid
 fonttools==4.49.0
     # via matplotlib
 frozenlist==1.4.1
@@ -385,7 +389,10 @@ notebook==6.4.12
 notebook-shim==0.1.0
     # via nbclassic
 numba==0.59.0
-    # via numbagg
+    # via
+    #   numbagg
+    #   sparse
+    #   xesmf
 numbagg==0.8.1
     # via xarray
 numcodecs==0.12.1
@@ -421,7 +428,10 @@ numpy==1.23.3
     #   scipy
     #   seaborn
     #   snuggs
+    #   sparse
     #   xarray
+    #   xarray-regrid
+    #   xesmf
     #   zarr
 numpy-groupies==0.10.2
     # via flox
@@ -602,7 +612,9 @@ scipy==1.9.1
     # via
     #   flox
     #   scikit-learn
+    #   sparse
     #   xarray
+    #   xarray-regrid
 seaborn==0.13.2
     # via xarray
 send2trash==1.8.0
@@ -615,6 +627,7 @@ shapely==1.8.4
     #   cartopy
     #   geopandas
     #   rasterstats
+    #   xesmf
 simplejson==3.17.6
     # via rasterstats
 six==1.16.0
@@ -637,6 +650,8 @@ sortedcontainers==2.4.0
     # via distributed
 soupsieve==2.3.2.post1
     # via beautifulsoup4
+sparse==0.15.1
+    # via xesmf
 stack-data==0.5.0
     # via ipython
 tblib==3.0.0
@@ -724,7 +739,14 @@ wrapt==1.16.0
 xarray[accel,complete,io,parallel,viz]==2023.10.1
     # via
     #   -r requirements.in
+    #   cf-xarray
     #   rioxarray
+    #   xarray-regrid
+    #   xesmf
+xarray-regrid==0.2.3
+    # via -r requirements.in
+xesmf==0.8.4
+    # via -r requirements.in
 yarl==1.9.4
     # via aiohttp
 zarr==2.17.1

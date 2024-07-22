@@ -23,3 +23,9 @@ eccodes==1.3.1
 cfgrib
 xarray[complete]==2023.10.1
 rioxarray
+xesmf
+netcdf4
+scikit-learn
+dl4ds
+tensorflow
+climetlab

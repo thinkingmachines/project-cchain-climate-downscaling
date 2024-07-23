@@ -938,3 +938,4 @@ zarr==2.17.1
     # via xarray
 zict==3.0.0
     # via distributed
+esmpy==8.6.1

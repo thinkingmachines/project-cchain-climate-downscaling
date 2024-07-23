@@ -9,13 +9,14 @@ env:
 	conda env create -f environment.yml --no-default-packages
 
 setup:
-	conda install -c conda-forge gdal -y
+	conda install -c conda-forge gdal esmpy -y
 	pip install uv
 	uv pip sync requirements.txt
 	pre-commit install
 
 requirements:
 	uv pip compile pyproject.toml -o requirements.txt -v
+	echo "esmpy==8.6.1" >> requirements.txt
 	uv pip sync requirements.txt
 
 test:

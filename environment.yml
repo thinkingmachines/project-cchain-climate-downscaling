@@ -1,4 +1,4 @@
-name: ml-geo-starter
+name: climate-downscaling
 channels:
   - conda-forge
   - defaults

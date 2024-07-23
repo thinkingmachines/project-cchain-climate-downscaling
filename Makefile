@@ -8,6 +8,9 @@ help:
 conda-env:
 	conda env create -f environment.yml --no-default-packages
 
+mamba-env:
+	mamba env create -f environment.yml --no-default-packages
+
 setup:
 	conda install -c conda-forge gdal=3.5.2 -y
 	pip install pip-tools

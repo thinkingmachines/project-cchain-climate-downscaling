@@ -1,0 +1,184 @@
+from typing import Any, List
+
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.stats import norm
+import xarray as xr
+
+
+def correct_gridded_liu(
+    gridded_da: xr.DataArray,
+    station_da: xr.DataArray,
+    std_scale: float = 0.1,
+    should_plot: bool = True,
+) -> xr.DataArray:
+    """
+    Apply bias correction based on Liu et al. (2019) for a grid within the influence of a station.
+    Assume the station standard deviation is a fraction of the mean.
+    For the computation of k (ratio), n was used instead of n_max.
+
+    Parameters
+    ----------
+    gridded_da : xarray DataArray
+        Contains the gridded variables.
+
+    station_da : xarray DataArray
+        Contains the variables for a single station.
+
+    std_scale : float or int
+        Scaling factor on the station mean to get the station standard deviation.
+
+    should_plot : bool
+        If True, plots the frequency distributions.
+
+    Returns
+    -------
+    xarray DataArray
+    """
+    gridded_arr = gridded_da.values
+    gridded_mean = np.nanmean(gridded_arr)
+    gridded_std = max(np.nanstd(gridded_arr), 1e-12)  # avoid 0 std
+
+    station_mean = station_da.values[0]
+    station_std = max(std_scale * station_mean, 1e-12)  # avoid 0 std
+
+    # compute for the ratio k by assuming both datasets follow a normal distribution
+    n = np.linspace(station_mean - 4 * station_std, station_mean + 4 * station_std, 100)
+    ratio = norm.pdf(n, loc=gridded_mean, scale=gridded_std) / norm.pdf(
+        n, loc=station_mean, scale=station_std
+    )
+    ratio_da = custom_replace(gridded_da, n, ratio)
+
+    # compute for the corrected gridded data
+    corrected_da = (
+        station_std
+        * np.sqrt(
+            2 * np.log(ratio_da * gridded_std / station_std)
+            + ((gridded_da - gridded_mean) / gridded_std) ** 2
+        )
+        + station_mean
+    )
+
+    # visualize the frequency distributions
+    if should_plot:
+        plt.plot(
+            n, norm.pdf(n, loc=station_mean, scale=station_std), "o", label="station"
+        )
+        plt.plot(
+            n,
+            norm.pdf(n, loc=gridded_mean, scale=gridded_std),
+            "o",
+            label="gridded",
+        )
+        plt.legend()
+        plt.show()
+
+    return corrected_da
+
+
+def correct_gridded_zscore(
+    gridded_da: xr.DataArray,
+    station_da: xr.DataArray,
+    std_scale: float | int = 10,
+    should_plot: bool = True,
+) -> xr.DataArray:
+    """
+    Apply bias correction based on the z-score formula for a grid within the influence of a station.
+    Assume the station standard deviation is a fraction of the mean.
+    z-score = (value - mean)/std
+
+    Parameters
+    ----------
+    gridded_da : xarray DataArray
+        Contains the gridded variables.
+
+    station_da : xarray DataArray
+        Contains the variables for a single station.
+
+    std_scale : float or int
+        Scaling factor on the station mean to get the station standard deviation.
+
+    should_plot : bool
+        If True, plots the frequency distributions.
+
+    Returns
+    -------
+    xarray DataArray
+    """
+    gridded_arr = gridded_da.values
+    gridded_mean = np.nanmean(gridded_arr)
+    gridded_std = max(np.nanstd(gridded_arr), 1e-12)  # avoid 0 std
+
+    station_mean = station_da.values[0]
+    station_std = max(std_scale * station_mean, 1e-12)  # avoid 0 std
+
+    # compute for the corrected gridded data
+    corrected_da = (
+        (gridded_da - gridded_mean) / gridded_std
+    ) * station_std + station_mean
+
+    # visualize the frequency distributions
+    if should_plot:
+        n = np.linspace(
+            station_mean - 4 * station_std, station_mean + 4 * station_std, 100
+        )
+        plt.plot(
+            n, norm.pdf(n, loc=station_mean, scale=station_std), "o", label="station"
+        )
+        plt.plot(
+            n,
+            norm.pdf(n, loc=gridded_mean, scale=gridded_std),
+            "o",
+            label="gridded",
+        )
+        plt.legend()
+        plt.show()
+
+    return corrected_da
+
+
+def custom_replace(
+    da: xr.DataArray,
+    to_replace: List[Any],
+    value: List[Any],
+) -> xr.DataArray:
+    """
+    Replace a set of values in an xarray DataArray
+    From https://github.com/pydata/xarray/issues/6377#issue-1173497454
+
+    Parameters
+    ----------
+    da : xarray DataArray
+
+    to_replace : list
+        List of values in da to be replaced.
+
+    value : list
+        List of values replacing to_replace.
+
+    Returns
+    -------
+    xarray DataArray
+    """
+    # Use np.unique to create an inverse index
+    flat = da.values.ravel()
+    uniques, index = np.unique(flat, return_inverse=True)
+    replaceable = np.isin(flat, to_replace)
+
+    # Create a replacement array in which there is a 1:1 relation between
+    # uniques and the replacement values, so that we can use the inverse index
+    # to select replacement values.
+    valid = np.isin(to_replace, uniques, assume_unique=True)
+    # Remove to_replace values that are not present in da. If no overlap
+    # exists between to_replace and the values in da, just return a copy.
+    if not valid.any():
+        return da.copy()
+    to_replace = to_replace[valid]
+    value = value[valid]
+
+    replacement = np.zeros_like(uniques)
+    replacement[np.searchsorted(uniques, to_replace)] = value
+
+    out = flat.copy()
+    out[replaceable] = replacement[index[replaceable]]
+    return da.copy(data=out.reshape(da.shape))

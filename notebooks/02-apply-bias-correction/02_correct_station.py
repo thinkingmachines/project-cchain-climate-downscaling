@@ -21,12 +21,14 @@ from pathlib import Path
 import sys
 
 # Library imports
-from cmethods import adjust
 import matplotlib.pyplot as plt
+import scipy.stats as sc
+from sklearn.metrics import mean_squared_error
 import xarray as xr
 
 # Util imports
 sys.path.append("../../")
+import src.climate_downscaling_utils as cd
 
 # %% [markdown]
 # # Correct station data
@@ -41,8 +43,7 @@ sys.path.append("../../")
 # %%
 CITY_NAME = "Dagupan"
 DATE = "2008-07-01"
-SHOULD_DEBUG = False
-
+SHOULD_DEBUG = True
 PROCESSED_PATH = Path("../../data/02-processed")
 CORRECTED_PATH = PROCESSED_PATH / "bias-correction"
 
@@ -52,95 +53,6 @@ GRIDDED_NC = (
     / f"input/chirts_chirps_regridded_interpolated_{CITY_NAME.lower()}.nc"
 )
 GRIDDED_SUBSET_NC = CORRECTED_PATH / f"gridded_{CITY_NAME.lower()}.nc"
-
-
-# %% [markdown]
-# ### Quantile mapping
-# TODO: Transfer to `climate_downscaling_utils.py`
-
-# %%
-def correct_gridded_quantile_mapping(
-    gridded_da: xr.DataArray,
-    station_da: xr.DataArray,
-    method: str = "quantile_delta_mapping",
-    n_quantiles: int = 1_000,
-    offset: float = 1e-12,
-    should_plot: bool = True,
-):
-    """
-    Apply bias correction for a grid within the influence of a station.
-    First record the pixelwise deviation to the spatial mean (multiplicative if rainfall and additive otherwise) per timestep.
-    Then apply the bias correction.
-    Lastly, reapply the deviation to preserve the spatial variability.
-
-    Parameters
-    ----------
-    gridded_da : xarray DataArray
-        Contains the gridded variables.
-
-    station_da : xarray DataArray
-        Contains the variables for a single station.
-
-    method : string
-        Bias correction method under the adjust function of the cmethods package.
-        Default is "quantile_delta_mapping".
-
-    n_quantiles : int
-        Optional, number of quantiles for "quantile_delta_mapping".
-        Default is 1_000.
-
-    offset : float
-        Numerical offset for calculating the deviation.
-        Default is 1 x 10^(-12).
-
-    should_plot : bool
-        If True, plots the frequency distributions.
-
-    Returns
-    -------
-    xarray DataArray
-    """
-    bias_correction_kind = "*" if gridded_da.name == "precip" else "+"
-
-    # get the spatial mean
-    gridded_mean_da = gridded_da.mean(dim=["lat", "lon"], skipna=True)
-
-    if gridded_da.name == "precip":
-        gridded_deviation_da = gridded_da / max(gridded_mean_da, offset)
-    else:
-        gridded_deviation_da = gridded_da - gridded_mean_da
-
-    # observation (obs) is the station_da timeseries
-    # historical simulation (simh) is gridded_da since it has the bias
-    # predicted simulation (simp) is also gridded_da since we are correcting that data
-    corrected_da = adjust(
-        method=method,
-        obs=station_da,
-        simh=gridded_mean_da,
-        simp=gridded_mean_da,
-        n_quantiles=n_quantiles,
-        kind=bias_correction_kind,
-    )
-
-    corrected_3d_da = corrected_da.expand_dims(
-        dim=dict(
-            lat=gridded_da["lat"].shape[0],
-            lon=gridded_da["lon"].shape[0],
-        )
-    ).assign_coords(
-        dict(
-            lat=gridded_da["lat"],
-            lon=gridded_da["lon"],
-        )
-    )
-
-    if gridded_da.name == "precip":
-        corrected_variability_da = corrected_3d_da * gridded_deviation_da
-    else:
-        corrected_variability_da = corrected_3d_da + gridded_deviation_da
-
-    return corrected_variability_da
-
 
 # %% [markdown]
 # ### Set run parameters
@@ -155,7 +67,7 @@ variable_params = dict(
 algo_params = [
     dict(
         name="Quantile Delta Mapping",
-        func=correct_gridded_quantile_mapping,
+        func=cd.correct_gridded_quantile_mapping,
     ),
     # dict(
     #     name="Liu et al. (2019)",
@@ -186,15 +98,16 @@ station_lon = station_ds["lon"].item()
 for var, title in variable_params.items():
     print(f"Now doing {title}")
 
-    gridded_da = gridded_ds[var]  # .sel(time=DATE, method="nearest")
-    gridded_subset_da = gridded_subset_ds[var]  # .sel(time=DATE, method="nearest")
+    gridded_da = gridded_ds[var]  #
+    gridded_subset_da = gridded_subset_ds[var]
+    station_da = station_ds[var]
 
     if SHOULD_DEBUG:
-        gridded_da.plot()
+        gridded_da.sel(time=DATE, method="nearest").plot()
         plt.plot(station_lon, station_lat, "o")
         plt.show()
 
-        gridded_subset_da.plot()
+        gridded_subset_da.sel(time=DATE, method="nearest").plot()
         plt.plot(station_lon, station_lat, "o")
         plt.show()
 
@@ -206,190 +119,111 @@ for var, title in variable_params.items():
 
         if algo_param["name"] == "Quantile Delta Mapping":
             corrected_da = algo_param["func"](
-                gridded_subset_da,
-                station_da=station_ds[var],  # .sel(time=DATE, method="nearest"),
+                gridded_da=gridded_subset_da,
+                station_da=station_da[:, 0, 0].drop_vars(["lat", "lon"]),
                 should_plot=SHOULD_DEBUG,
             )
-    else:
-        corrected_da = algo_param["func"](
-            gridded_subset_da,
-            station_da=station_ds[var].sel(time=DATE, method="nearest"),
-            std_scale=0.1,
-            should_plot=SHOULD_DEBUG,
-        )
+        else:
+            corrected_da = algo_param["func"](
+                gridded_subset_da.sel(time=DATE, method="nearest"),
+                station_da=station_da.sel(time=DATE, method="nearest"),
+                std_scale=0.1,
+                should_plot=SHOULD_DEBUG,
+            )
 
         if SHOULD_DEBUG:
-            plot_min = min([corrected_da.min(), gridded_subset_da.min()]).values
-            plot_max = max([corrected_da.max(), gridded_subset_da.max()]).values
+            gridded_subset_slice_da = gridded_subset_da.sel(time=DATE, method="nearest")
+            corrected_slice_da = corrected_da.sel(time=DATE, method="nearest")
 
-            gridded_subset_da.plot(vmin=plot_min, vmax=plot_max)
+            plot_min = min(
+                [corrected_slice_da.min(), gridded_subset_slice_da.min()]
+            ).values
+            plot_max = max(
+                [corrected_slice_da.max(), gridded_subset_slice_da.max()]
+            ).values
+
+            gridded_subset_slice_da.plot(vmin=plot_min, vmax=plot_max)
             plt.title(title)
             plt.show()
 
-            corrected_da.plot(vmin=plot_min, vmax=plot_max)
+            corrected_slice_da.plot(vmin=plot_min, vmax=plot_max)
             plt.title(f"Corrected {title}\n{algo_param['name']}")
             plt.show()
 
-            (corrected_da - gridded_subset_da).plot(cmap="RdBu")
+            abs(corrected_slice_da - gridded_subset_slice_da).plot(cmap="RdYlGn")
             plt.title(
                 f"Difference between corrected and uncorrected\n{title}\n{algo_param['name']}"
             )
             plt.show()
 
+# %% [markdown]
+# ### Plot select dates
+
 # %%
-gridded_da = gridded_subset_da
-station_da = station_ds[var][:, 0, 0].drop_vars(
-    ["lat", "lon"]
-)  # .sel(time=DATE, method="nearest")
-method = "quantile_delta_mapping"
-n_quantiles = 1_000
-offset = 1e-12
+for slice_date in [f"2008-{i:02d}-20" for i in range(7, 12 + 1)]:
+    print(slice_date)
+    gridded_subset_slice_da = gridded_subset_da.sel(time=slice_date)
+    corrected_slice_da = corrected_da.sel(time=slice_date)
 
-bias_correction_kind = "*" if gridded_da.name == "precip" else "+"
+    plot_min = min([corrected_slice_da.min(), gridded_subset_slice_da.min()]).values
+    plot_max = max([corrected_slice_da.max(), gridded_subset_slice_da.max()]).values
 
-# get the spatial mean
-gridded_mean_da = gridded_da.mean(dim=["lat", "lon"], skipna=True)
+    gridded_subset_slice_da.plot(vmin=plot_min, vmax=plot_max)
+    plt.title(f"{slice_date}\n{title}")
+    plt.show()
 
-if gridded_da.name == "precip":
-    gridded_deviation_da = gridded_da / max(gridded_mean_da, offset)
-else:
-    gridded_deviation_da = gridded_da - gridded_mean_da
+    corrected_slice_da.plot(vmin=plot_min, vmax=plot_max)
+    plt.title(
+        f"{slice_date}\nCorrected {title}\n{algo_param['name']}\nStation reading: {station_da.sel(time=slice_date).mean().item()}"
+    )
+    plt.show()
 
-# align DataArrays to match dimensions
-station_aligned_da, gridded_aligned_da = xr.align(
-    station_da, gridded_mean_da, join="inner"
+    (corrected_slice_da - gridded_subset_slice_da).plot(cmap="RdYlGn")
+    plt.title(
+        f"{slice_date}\nDifference between corrected and uncorrected\n{title}\n{algo_param['name']}"
+    )
+    plt.show()
+
+# %% [markdown]
+# ### Scatterplot
+
+# %%
+variable_name = "Minimum Temperature"
+units = "°C"
+plot_offset = 2.5
+# variable_name = "Maximum Temperature"
+# units = "°C"
+# plot_offset = 1
+# variable_name = "Precipitation"
+# units = "mm/day" #"°C"
+# plot_offset = 10
+
+station_aligned_da, corrected_aligned_da = xr.align(
+    station_da.mean(dim=["lat", "lon"], skipna=True),
+    corrected_da.mean(dim=["lat", "lon"], skipna=True),
+    join="inner",
 )
 
-# observation (obs) is the station_da timeseries
-# historical simulation (simh) is gridded_da since it has the bias
-# predicted simulation (simp) is also gridded_da since we are correcting that data
-corrected_ds = adjust(
-    method=method,
-    obs=station_aligned_da,
-    simh=gridded_aligned_da,
-    simp=gridded_aligned_da,
-    n_quantiles=n_quantiles,
-    kind=bias_correction_kind,
+corr, pval = sc.pearsonr(station_aligned_da, corrected_aligned_da)
+rmse = mean_squared_error(station_aligned_da, corrected_aligned_da, squared=False)
+
+fig, ax = plt.subplots(1, 1)
+plot_min = min(station_aligned_da.min(), corrected_aligned_da.min()) - plot_offset
+plot_max = max(station_aligned_da.max(), corrected_aligned_da.max()) + plot_offset
+ax.plot(
+    [plot_min - plot_offset, plot_max + plot_offset],
+    [plot_min - plot_offset, plot_max + plot_offset],
+    "k-",
 )
-
-# nlat = gridded_da["lat"].shape[0]
-# nlon = gridded_da["lon"].shape[0]
-# ntime = gridded_aligned_da.values.shape[0]
-# corrected_3d_da = xr.DataArray(
-#     nlat*[
-#         nlon*[
-#             corrected_ds[gridded_da.name].values[:,0,0]
-#         ]
-#     ],
-#     dims=dict(
-#         lat=gridded_da["lat"],
-#         lon=gridded_da["lon"],
-#         time=corrected_ds["time"],
-#     ),
-#     coords=dict(
-#         lat=gridded_da["lat"],
-#         lon=gridded_da["lon"],
-#         time=corrected_ds["time"],
-#     )
-# )
-
-corrected_3d_da = (
-    corrected_ds
-    # .drop_dims(
-    #     [
-    #         "lat",
-    #         "lon",
-    #     ]
-    # )
-    .expand_dims(
-        dim=dict(
-            lat=gridded_da["lat"].shape[0],
-            lon=gridded_da["lon"].shape[0],
-        ),
-        # create_index_for_new_dim=False,
-    ).transpose("time", "lat", "lon")
-    # .assign_coords(
-    #     dict(
-    #         lat=gridded_da["lat"],
-    #         lon=gridded_da["lon"],
-    #     )
-    # )
+ax.plot(station_aligned_da, corrected_aligned_da, "o", color="firebrick")
+ax.set_aspect(1)
+plt.xlabel(f"Station {variable_name} ({units})")
+plt.ylabel(f"Corrected {variable_name} ({units})")
+plt.title(
+    f"Scatterplot of Corrected vs. Station {variable_name}\ncorr: {corr:.3f} pval: {pval:.3f}\nrmse: {rmse:.3f} {units}"
 )
-
-if gridded_da.name == "precip":
-    corrected_variability_da = corrected_3d_da * gridded_deviation_da
-else:
-    corrected_variability_da = corrected_3d_da + gridded_deviation_da
-
-# %%
-corrected_variability_da["tmin"][0].plot()
-
-# %%
-gridded_deviation_da[0].plot()
-
-# %%
-station_da.sel(time="2008-07-01").values
-
-# %%
-corrected_variability_da.sel(time="2008-07-01")["tmin"].plot()
-
-# %%
-gridded_subset_ds.sel(time="2008-07-01")["tmin"].plot()
-
-# %%
-(corrected_variability_da.sel(time="2008-07-01") - gridded_da.sel(time="2008-07-01"))[
-    "tmin"
-].plot()
-
-# %%
-station_aligned_da[:, 0, 0].drop_vars(["lat", "lon"])  # .drop_indexes(["lat","lon"])
-
-# %%
-gridded_aligned_da
-
-# %%
-corrected_ds.reindex(
-    dict(
-        lat=gridded_da["lat"],
-        lon=gridded_da["lon"],
-    ),
-    method="ffill",
-)["tmin"][0].plot()
-
-# %%
-corrected_variability_da
-
-# %%
-gridded_subset_ds["tmin"][0].plot()
-
-# %%
-corrected_variability_da["tmin"][:, :, 0].plot()
-
-# %%
-(corrected_variability_da["tmin"][:, :, 0] - gridded_subset_ds["tmin"][0]).plot()
-
-# %%
-gridded_subset_ds["tmin"][0].mean(dim=["lat", "lon"])
-
-# %%
-corrected_3d_da["tmin"][:, :, 0]
-
-# %%
-corrected_3d_da["tmin"][:, :, 0].plot()
-
-# %%
-gridded_deviation_da[0].plot()
-
-# %%
-station_da
-
-# %%
-gridded_mean_da
-
-# %%
-a, b = xr.align(station_da, gridded_mean_da, join="inner")
-
-# %%
-b
+plt.xlim(plot_min, plot_max)
+plt.ylim(plot_min, plot_max)
+plt.show()
 
 # %%

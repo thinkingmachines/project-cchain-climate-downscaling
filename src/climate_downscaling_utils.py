@@ -1,6 +1,7 @@
 from typing import Any, List
 
 from cmethods import adjust
+from cmethods.distribution import detrended_quantile_mapping
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import norm
@@ -78,16 +79,17 @@ def correct_gridded_liu(
     return corrected_da
 
 
-def correct_gridded_quantile_mapping(
+def correct_gridded_cmethods(
     gridded_da: xr.DataArray,
     station_da: xr.DataArray,
     method: str = "quantile_delta_mapping",
+    group: str = "time_month",
     n_quantiles: int = 1_000,
     offset: float = 1e-12,
     should_plot: bool = False,
 ):
     """
-    Apply bias correction for a grid within the influence of a station.
+    Apply bias correction using the cmethods package for a grid within the influence of a station.
     First record the pixelwise deviation to the spatial mean (multiplicative if rainfall and additive otherwise) per timestep.
     Then apply the bias correction.
     Lastly, reapply the deviation to preserve the spatial variability.
@@ -104,8 +106,12 @@ def correct_gridded_quantile_mapping(
         Bias correction method under the adjust function of the cmethods package.
         Default is "quantile_delta_mapping".
 
+    group : string
+        Grouping of time series.
+        Default is "time.month".
+
     n_quantiles : int
-        Optional, number of quantiles for "quantile_delta_mapping".
+        Optional, number of quantiles for quantile mapping techniques.
         Default is 1_000.
 
     offset : float
@@ -119,7 +125,12 @@ def correct_gridded_quantile_mapping(
     -------
     xarray DataArray
     """
-    bias_correction_kind = "*" if gridded_da.name == "precip" else "+"
+    if method == "variance_scaling":
+        bias_correction_kind = "+"
+    elif gridded_da.name == "precip":
+        bias_correction_kind = "*"
+    else:
+        bias_correction_kind = "+"
 
     # get the spatial mean
     gridded_mean_da = gridded_da.mean(dim=["lat", "lon"], skipna=True)
@@ -139,14 +150,33 @@ def correct_gridded_quantile_mapping(
     # observation (obs) is the station_da timeseries
     # historical simulation (simh) is gridded_da since it has the bias
     # predicted simulation (simp) is also gridded_da since we are correcting that data
-    corrected_ds = adjust(
-        method=method,
-        obs=station_aligned_da,
-        simh=gridded_aligned_da,
-        simp=gridded_aligned_da,
-        n_quantiles=n_quantiles,
-        kind=bias_correction_kind,
-    )
+    if method == "detrended_quantile_mapping":
+        corrected_ds = detrended_quantile_mapping(
+            method=method,
+            obs=station_aligned_da,
+            simh=gridded_aligned_da,
+            simp=gridded_aligned_da,
+            n_quantiles=n_quantiles,
+            kind=bias_correction_kind,
+        )
+    elif method in ["quantile_mapping", "quantile_delta_mapping"]:
+        corrected_ds = adjust(
+            method=method,
+            obs=station_aligned_da,
+            simh=gridded_aligned_da,
+            simp=gridded_aligned_da,
+            n_quantiles=n_quantiles,
+            kind=bias_correction_kind,
+        )
+    else:
+        corrected_ds = adjust(
+            method=method,
+            obs=station_aligned_da,
+            simh=gridded_aligned_da,
+            simp=gridded_aligned_da,
+            group=group,
+            kind=bias_correction_kind,
+        )
 
     corrected_3d_da = corrected_ds.expand_dims(
         dim=dict(

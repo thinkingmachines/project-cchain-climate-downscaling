@@ -7,7 +7,7 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.16.0
 #   kernelspec:
-#     display_name: climate-downscaling
+#     display_name: Python 3 (ipykernel)
 #     language: python
 #     name: python3
 # ---
@@ -35,7 +35,9 @@ sys.path.append("../../")
 # ### Input parameters
 
 # %%
-CITY_NAME = "Dagupan"
+CITY_NAME = "CagayanDeOro"
+STATION_NAMES = ["Lumbia"]
+SUFFIX = "Lumbia"
 VARS = ["precip", "tmax", "tmin"]
 STATION_RESOLUTION_DEGREES = 0.25
 
@@ -48,12 +50,12 @@ DOMAINS_GEOJSON = RAW_PATH / "domains/downscaling_domains_fixed.geojson"
 STATION_LOCATION_CSV = RAW_PATH / "station_data/PAGASA_station_locations.csv"
 STATION_DATA_CSV = PROCESSED_PATH / "station_data.csv"
 
-STATION_NC = CORRECTED_PATH / f"station_{CITY_NAME.lower()}.nc"
+STATION_NC = CORRECTED_PATH / f"station_{CITY_NAME.lower()}_{SUFFIX.lower()}.nc"
 GRIDDED_NC = (
     PROCESSED_PATH
     / f"input/chirts_chirps_regridded_interpolated_{CITY_NAME.lower()}.nc"
 )
-GRIDDED_SUBSET_NC = CORRECTED_PATH / f"gridded_{CITY_NAME.lower()}.nc"
+GRIDDED_SUBSET_NC = CORRECTED_PATH / f"gridded_{CITY_NAME.lower()}_{SUFFIX.lower()}.nc"
 
 # %% [markdown]
 # ## Station data
@@ -65,13 +67,16 @@ GRIDDED_SUBSET_NC = CORRECTED_PATH / f"gridded_{CITY_NAME.lower()}.nc"
 station_locations_df = pd.read_csv(STATION_LOCATION_CSV)
 station_locations_df.head()
 station_lats = station_locations_df.loc[
-    station_locations_df["station_name"] == CITY_NAME, "lat"
+    station_locations_df["station_name"].isin(STATION_NAMES), "lat"
 ]
 station_lons = station_locations_df.loc[
-    station_locations_df["station_name"] == CITY_NAME, "lon"
+    station_locations_df["station_name"].isin(STATION_NAMES), "lon"
 ]
-station_lat = station_lats.item()
-station_lon = station_lons.item()
+station_lat = station_lats.item() if len(station_lats) == 1 else station_lats.mean()
+station_lon = station_lons.item() if len(station_lons) == 1 else station_lons.mean()
+
+# %%
+station_locations_df
 
 # %% [markdown]
 # ### Load station data
@@ -79,12 +84,14 @@ station_lon = station_lons.item()
 # %%
 stations_df = pd.read_csv(STATION_DATA_CSV)
 station_df = (
-    stations_df[stations_df["station"] == CITY_NAME]
+    stations_df[stations_df["station"].isin(STATION_NAMES)]
     .drop_duplicates()
     .replace(-999, np.nan)
     .rename(columns={"rainfall": "precip"})
+    .groupby(["station", "date"])
+    .mean()
     .sort_values("date")
-    .reset_index(drop=True)
+    .reset_index()
 )
 station_df.head()
 
@@ -92,22 +99,28 @@ station_df.head()
 # ### Arrange as a Dataset
 
 # %%
-station_ds = xr.Dataset(
-    data_vars={
-        var: (
-            ["time", "lat", "lon"],
-            station_df[var].to_numpy().reshape((len(station_df["date"]), 1, 1)),
-        )
-        for var in VARS
-    },
-    coords=dict(
-        time=("time", pd.DatetimeIndex(station_df["date"])),
-        lon=("lon", station_lons),
-        lat=("lat", station_lats),
-    ),
-    attrs=dict(
-        description="Station data",
-    ),
+station_ds = (
+    xr.Dataset(
+        data_vars={
+            var: (
+                ["time", "lat"],
+                station_df[var]
+                .to_numpy()
+                .reshape((len(station_df["date"].unique()), len(station_lats))),
+            )
+            for var in VARS
+        },
+        coords=dict(
+            time=("time", pd.DatetimeIndex(station_df["date"].unique())),
+            lat=("lat", station_lats),
+        ),
+        attrs=dict(
+            description="Station data",
+        ),
+    )
+    .expand_dims(lon=len(station_lons))
+    .assign_coords(lon=station_lons)
+    .transpose("time", "lat", "lon")
 )
 station_ds
 

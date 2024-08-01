@@ -151,13 +151,22 @@ def correct_gridded_cmethods(
     # historical simulation (simh) is gridded_da since it has the bias
     # predicted simulation (simp) is also gridded_da since we are correcting that data
     if method == "detrended_quantile_mapping":
-        corrected_ds = detrended_quantile_mapping(
+        corrected_arr = detrended_quantile_mapping(
             method=method,
             obs=station_aligned_da,
             simh=gridded_aligned_da,
             simp=gridded_aligned_da,
             n_quantiles=n_quantiles,
             kind=bias_correction_kind,
+        )
+        # print(corrected_arr.shape)
+        corrected_ds = xr.Dataset(
+            data_vars={
+                f"{gridded_da.name}": (["time"], corrected_arr),
+            },
+            coords=dict(
+                time=gridded_aligned_da["time"],
+            ),
         )
     elif method in ["quantile_mapping", "quantile_delta_mapping"]:
         corrected_ds = adjust(

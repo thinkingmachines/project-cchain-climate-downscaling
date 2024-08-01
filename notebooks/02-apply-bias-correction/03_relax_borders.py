@@ -28,11 +28,10 @@ import xarray as xr
 sys.path.append("../../")
 
 # %%
-CITY_NAME = "Dagupan"
+CITY_NAME = "Davao"
 RESOLUTION = 0.02
 CELL_WIDTH = 3
 
-YEARS = [2007, 2008, 2009, 2016, 2017, 2018]
 PROCESSED_PATH = Path("../../data/02-processed")
 CORRECTED_PATH = PROCESSED_PATH / "bias-correction"
 
@@ -56,6 +55,9 @@ gridded_aligned_ds, _ = xr.align(
 
 gridded_ds = gridded_all_ds.sel(time=gridded_aligned_ds["time"])
 corrected_subset_ds = corrected_subset_all_ds.sel(time=gridded_aligned_ds["time"])
+# gridded_ds["tmin"][0].plot()
+# plt.title("CHIRTS Minimum Temperature")
+# plt.show()
 
 # %%
 gridded_ds.loc[
@@ -64,9 +66,6 @@ gridded_ds.loc[
         lon=corrected_subset_ds["lon"],
     )
 ] = corrected_subset_ds
-# gridded_ds["tmin"][0].plot()
-# plt.title("CHIRTS Minimum Temperature")
-# plt.show()
 
 # %%
 lat_arr = corrected_subset_ds["lat"].to_numpy()
@@ -158,5 +157,8 @@ gridded_ds.loc[
 # gridded_ds["tmin"][0].plot()
 # plt.title("Smoothened Corrected Minimum Temperature")
 # plt.show()
+
+# %%
+gridded_ds.to_netcdf(CORRECTED_NC, engine="scipy")
 
 # %%

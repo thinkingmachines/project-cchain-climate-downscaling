@@ -42,13 +42,14 @@ import src.climate_downscaling_utils as cd
 # ### Set input parameters
 
 # %%
-CITY_NAME = "CagayanDeOro_ElSalvador"
+CITY_NAME = "Zamboanga"
 
 DATE = "2008-07-01"  # sample date for debugging
 YEARS = [2007, 2008, 2009, 2016, 2017, 2018]
 SHOULD_DEBUG = False
 PROCESSED_PATH = Path("../../data/02-processed")
-CORRECTED_PATH = PROCESSED_PATH / "bias-correction"
+CORRECTED_PATH = PROCESSED_PATH / "bias-correction-optimized"
+CORRECTED_PATH.mkdir(parents=True, exist_ok=True)
 
 STATION_NC = CORRECTED_PATH / f"station_{CITY_NAME.lower()}.nc"
 GRIDDED_NC = (
@@ -69,9 +70,9 @@ variable_params = dict(
 )
 
 method_params = dict(
-    tmin="linear_scaling",
+    tmin="variance_scaling",
     tmax="linear_scaling",
-    precip="quantile_mapping",
+    precip="linear_scaling",
 )
 
 algo_params = dict(
@@ -85,11 +86,11 @@ algo_params = dict(
         func=cd.correct_gridded_cmethods,
         group="time.month",
     ),
-    delta_method=dict(
-        name="Delta Method",
-        func=cd.correct_gridded_cmethods,
-        group="time.month",
-    ),
+    # delta_method=dict(
+    #     name="Delta Method",
+    #     func=cd.correct_gridded_cmethods,
+    #     group="time.month",
+    # ),
     quantile_mapping=dict(
         name="Quantile Mapping",
         func=cd.correct_gridded_cmethods,
@@ -100,11 +101,11 @@ algo_params = dict(
         func=cd.correct_gridded_cmethods,
         n_quantiles=1_000,
     ),
-    quantile_delta_mapping=dict(
-        name="Quantile Delta Mapping",
-        func=cd.correct_gridded_cmethods,
-        n_quantiles=1_000,
-    ),
+    # quantile_delta_mapping=dict(
+    #     name="Quantile Delta Mapping",
+    #     func=cd.correct_gridded_cmethods,
+    #     n_quantiles=1_000,
+    # ),
     # liu = dict(
     #     name="Liu et al. (2019)",
     #     func=cd.correct_gridded_liu,
@@ -143,35 +144,6 @@ scatterplot_params = dict(
         color="dodgerblue",
     ),
 )
-
-# quantiles = [
-#     3,
-#     5,
-#     6,
-#     7,
-#     8,
-#     9,
-#     10,
-#     11,
-#     12,
-#     13,
-#     14,
-#     15,
-#     25,
-#     50,
-#     75,
-#     100,
-#     250,
-#     500,
-#     750,
-#     1_000,
-#     2_500,
-#     5_000,
-#     7_500,
-#     10_000,
-# ]
-
-# quantiles = [10]
 
 # %% [markdown]
 # ### Load data
@@ -293,6 +265,7 @@ stats_df = pd.DataFrame(stats_list)
 
 # %%
 # stats_list = []
+# corrected_ds = xr.Dataset(data_vars=None)
 # for var, title in variable_params.items():
 #     print(f"Now doing {title}")
 
@@ -317,7 +290,7 @@ stats_df = pd.DataFrame(stats_list)
 #         gridded_subset_da.plot.hist(bins=15)
 #         plt.show()
 
-#     for algo_param in algo_params:
+#     for method,algo_param in algo_params.items():
 #         print(f"Now doing {algo_param['name']} bias correction")
 
 #         if algo_param["name"] == "Liu et al. (2019)" or algo_param["name"] == "Z-Score":
@@ -331,11 +304,13 @@ stats_df = pd.DataFrame(stats_list)
 #             corrected_da = algo_param["func"](
 #                 gridded_da=gridded_subset_da,
 #                 station_da=station_da[:, 0, 0].drop_vars(["lat", "lon"]),
-#                 method=method_params[var],
+#                 method=method,
 #                 n_quantiles=algo_param["n_quantiles"],
 #                 group=algo_param["group"],
 #                 should_plot=SHOULD_DEBUG,
 #             )
+
+#         corrected_ds[var] = corrected_da
 
 #         station_aligned_da, corrected_aligned_da = xr.align(
 #             station_da.mean(dim=["lat", "lon"], skipna=True).dropna(dim="time"),
@@ -349,7 +324,7 @@ stats_df = pd.DataFrame(stats_list)
 #         stats_list.append(
 #             dict(
 #                 var=var,
-#                 method=method_params[var],
+#                 method=method,
 #                 corr=corr,
 #                 pval=pval,
 #                 rmse=rmse

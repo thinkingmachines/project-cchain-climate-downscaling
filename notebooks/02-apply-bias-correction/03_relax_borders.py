@@ -21,7 +21,9 @@ from pathlib import Path
 import sys
 
 # Library imports
+import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import xarray as xr
 
 # Util imports
@@ -33,7 +35,9 @@ RESOLUTION = 0.02
 CELL_WIDTH = 3
 
 PROCESSED_PATH = Path("../../data/02-processed")
-CORRECTED_PATH = PROCESSED_PATH / "bias-correction"
+CORRECTED_PATH = PROCESSED_PATH / "bias-correction-optimized"
+CORRECTED_IMAGES_PATH = CORRECTED_PATH / "images"
+CORRECTED_IMAGES_PATH.mkdir(parents=True, exist_ok=True)
 
 GRIDDED_NC = (
     PROCESSED_PATH
@@ -55,9 +59,16 @@ gridded_aligned_ds, _ = xr.align(
 
 gridded_ds = gridded_all_ds.sel(time=gridded_aligned_ds["time"])
 corrected_subset_ds = corrected_subset_all_ds.sel(time=gridded_aligned_ds["time"])
-# gridded_ds["tmin"][0].plot()
-# plt.title("CHIRTS Minimum Temperature")
-# plt.show()
+gridded_ds["tmin"][0].plot()
+plt.title(
+    f"{pd.DatetimeIndex(gridded_ds['time'])[0].strftime('%Y-%m-%d')}\nCHIRTS Minimum Temperature"
+)
+plt.savefig(
+    CORRECTED_IMAGES_PATH / f"{CITY_NAME.split('_')[0].lower()}_gridded.png",
+    dpi=300,
+    transparent=True,
+)
+plt.show()
 
 # %%
 gridded_ds.loc[
@@ -112,9 +123,17 @@ gridded_ds.loc[
         lon=corrected_subset_ds["lon"],
     )
 ] = corrected_subset_ds
-# gridded_ds["tmin"][0].plot()
-# plt.title("Corrected on top of CHIRTS Minimum Temperature")
-# plt.show()
+gridded_ds["tmin"][0].plot()
+plt.title(
+    f"{pd.DatetimeIndex(gridded_ds['time'])[0].strftime('%Y-%m-%d')}\nCorrected on top of CHIRTS Minimum Temperature"
+)
+plt.savefig(
+    CORRECTED_IMAGES_PATH
+    / f"{CITY_NAME.split('_')[0].lower()}_gridded_corrected_subset.png",
+    dpi=300,
+    transparent=True,
+)
+plt.show()
 
 # %% [markdown]
 # ### Smoothen entire domain
@@ -154,9 +173,16 @@ gridded_ds.loc[
     lon=lon_extended_arr,
     method="nearest",
 )
-# gridded_ds["tmin"][0].plot()
-# plt.title("Smoothened Corrected Minimum Temperature")
-# plt.show()
+gridded_ds["tmin"][0].plot()
+plt.title(
+    f"{pd.DatetimeIndex(gridded_ds['time'])[0].strftime('%Y-%m-%d')}\nSmoothened Corrected Minimum Temperature"
+)
+plt.savefig(
+    CORRECTED_IMAGES_PATH / f"{CITY_NAME.split('_')[0].lower()}_gridded_smoothened.png",
+    dpi=300,
+    transparent=True,
+)
+plt.show()
 
 # %%
 gridded_ds.to_netcdf(CORRECTED_NC, engine="scipy")

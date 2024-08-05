@@ -33,7 +33,7 @@ DATE = "2008-07-01"  # sample date for debugging
 YEARS = [2007, 2008, 2009, 2016, 2017, 2018]
 SHOULD_DEBUG = False
 PROCESSED_PATH = Path("../../data/02-processed")
-CORRECTED_PATH = PROCESSED_PATH / "bias-correction"
+CORRECTED_PATH = PROCESSED_PATH / "bias-correction-optimized"
 
 STATION_NC = CORRECTED_PATH / f"station_{CITY_NAME.lower()}.nc"
 GRIDDED_NC = (
@@ -41,8 +41,6 @@ GRIDDED_NC = (
     / f"input/chirts_chirps_regridded_interpolated_{CITY_NAME.lower()}.nc"
 )
 GRIDDED_SUBSET_NC = CORRECTED_PATH / f"gridded_{CITY_NAME.lower()}.nc"
-
-# %%
 
 # %%
 city_names = [
@@ -60,16 +58,36 @@ city_names = [
 ]
 
 # %%
-cities_df = pd.DataFrame(columns=["station", "var", "corr", "rmse"])
+cities_df = pd.DataFrame(columns=["station", "var", "method", "corr", "rmse"])
 for city in city_names:
     city_df = pd.read_parquet(CORRECTED_PATH / f"stats_{city.lower()}.parquet")
     # print(city)
     # print(city_df[["var","corr","rmse"]])
     city_df["station"] = city
     # print(city_df[["station","var","corr","rmse"]])
-    cities_df = pd.concat([cities_df, city_df[["station", "var", "corr", "rmse"]]])
+    cities_df = pd.concat(
+        [cities_df, city_df[["station", "var", "method", "corr", "rmse"]]]
+    )
 cities_df = cities_df.reset_index(drop=True)
 cities_df.to_parquet(CORRECTED_PATH / "stats_all_cities.parquet")
 cities_df.sort_values("corr")
+
+# %%
+# compare_df = cities_df.loc[cities_df["method"] == "quantile_mapping"].sort_values(["station","var"]).reset_index(drop=True)[["station","var"]]
+# compare_df["quantile_mapping"] = cities_df.loc[cities_df["method"] == "quantile_mapping"].sort_values(["station","var"]).reset_index(drop=True)["corr"]
+# compare_df["linear_scaling"] = cities_df.loc[cities_df["method"] == "linear_scaling"].sort_values(["station","var"]).reset_index(drop=True)["corr"]
+# compare_df["variance_scaling"] = cities_df.loc[cities_df["method"] == "variance_scaling"].sort_values(["station","var"]).reset_index(drop=True)["corr"]
+
+# compare_df["should_use_variance_scaling"] = compare_df["linear_scaling"] < 0.3
+# compare_df
+
+
+# %%
+# compare_df = cities_df.loc[cities_df["method"] == "quantile_mapping"].sort_values(["station","var"]).reset_index(drop=True)[["station","var"]]
+# compare_df["quantile_mapping"] = cities_df.loc[cities_df["method"] == "quantile_mapping"].sort_values(["station","var"]).reset_index(drop=True)["rmse"]
+# compare_df["linear_scaling"] = cities_df.loc[cities_df["method"] == "linear_scaling"].sort_values(["station","var"]).reset_index(drop=True)["rmse"]
+# compare_df["variance_scaling"] = cities_df.loc[cities_df["method"] == "variance_scaling"].sort_values(["station","var"]).reset_index(drop=True)["rmse"]
+# compare_df
+
 
 # %%

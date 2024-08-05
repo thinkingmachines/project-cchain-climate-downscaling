@@ -28,7 +28,7 @@ sys.path.append("../../")
 
 # %%
 PROCESSED_PATH = Path("../../data/02-processed")
-CORRECTED_PATH = PROCESSED_PATH / "bias-correction"
+CORRECTED_PATH = PROCESSED_PATH / "bias-correction-optimized"
 
 # %%
 city_names = [

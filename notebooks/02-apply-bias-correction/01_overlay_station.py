@@ -21,6 +21,7 @@ from pathlib import Path
 import sys
 
 # Library imports
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -30,32 +31,33 @@ sys.path.append("../../")
 
 # %% [markdown]
 # # Overlay station data to grids
+# Prepare gridded data to match station area of influence
 
 # %% [markdown]
 # ### Input parameters
 
 # %%
-CITY_NAME = "CagayanDeOro"
-STATION_NAMES = ["Lumbia"]
-SUFFIX = "Lumbia"
+CITY_NAME = "Davao"
+STATION_NAMES = ["Davao City"]
+SUFFIX = ""  # add underscore, only for Cagayan de Oro
 VARS = ["precip", "tmax", "tmin"]
 STATION_RESOLUTION_DEGREES = 0.25
 
 RAW_PATH = Path("../../data/01-raw")
 PROCESSED_PATH = Path("../../data/02-processed")
-CORRECTED_PATH = PROCESSED_PATH / "bias-correction"
+CORRECTED_PATH = PROCESSED_PATH / "bias-correction-radial-optimized"
 CORRECTED_PATH.mkdir(parents=True, exist_ok=True)
 
 DOMAINS_GEOJSON = RAW_PATH / "domains/downscaling_domains_fixed.geojson"
 STATION_LOCATION_CSV = RAW_PATH / "station_data/PAGASA_station_locations.csv"
 STATION_DATA_CSV = PROCESSED_PATH / "station_data.csv"
 
-STATION_NC = CORRECTED_PATH / f"station_{CITY_NAME.lower()}_{SUFFIX.lower()}.nc"
+STATION_NC = CORRECTED_PATH / f"station_{CITY_NAME.lower()}{SUFFIX.lower()}.nc"
 GRIDDED_NC = (
     PROCESSED_PATH
     / f"input/chirts_chirps_regridded_interpolated_{CITY_NAME.lower()}.nc"
 )
-GRIDDED_SUBSET_NC = CORRECTED_PATH / f"gridded_{CITY_NAME.lower()}_{SUFFIX.lower()}.nc"
+GRIDDED_SUBSET_NC = CORRECTED_PATH / f"gridded_{CITY_NAME.lower()}{SUFFIX.lower()}.nc"
 
 # %% [markdown]
 # ## Station data
@@ -138,15 +140,30 @@ gridded_ds = xr.open_dataset(GRIDDED_NC, engine="scipy").sel(band=1)
 gridded_ds
 
 # %%
+gridded_ds
+
+# %%
+station_lat, station_lon
+
+# %%
 station_buffer = STATION_RESOLUTION_DEGREES / 2
 gridded_subset_ds = gridded_ds.where(
-    (gridded_ds.lat >= (station_lat - station_buffer))
-    & (gridded_ds.lat <= (station_lat + station_buffer))
-    & (gridded_ds.lon >= (station_lon - station_buffer))
-    & (gridded_ds.lon <= (station_lon + station_buffer)),
+    (
+        (gridded_ds.lat - station_lat) ** 2 + (gridded_ds.lon - station_lon) ** 2
+        <= station_buffer**2
+    ),
     drop=True,
 )
 gridded_subset_ds
+
+# %%
+gridded_subset_ds["tmin"].sel(time="2007-01-01").plot()
+ax = plt.gca()
+ax.set_aspect(1)
+plt.show()
+
+# %%
+GRIDDED_SUBSET_NC
 
 # %%
 gridded_subset_ds.to_netcdf(GRIDDED_SUBSET_NC, engine="scipy")

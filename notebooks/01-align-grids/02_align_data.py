@@ -7,12 +7,13 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.16.0
 #   kernelspec:
-#     display_name: climate-downscaling
+#     display_name: Python 3 (ipykernel)
 #     language: python
 #     name: python3
 # ---
 
 # %%
+from functools import partial
 from pathlib import Path
 
 import numpy as np
@@ -28,8 +29,8 @@ INPUT_PATH = Path("../../data/01-raw")
 DEST_PATH = Path("../../data/02-processed")
 RESOLUTION = 0.02  # 2 km
 CROP_ALLOWANCE_DEG = 13 * RESOLUTION
-CITY_NAME = "Dagupan"
-YEAR = 2007
+CITY_NAME = "MetroManila"
+YEAR = 2008
 
 # %% [markdown]
 # ### Read bounds
@@ -39,6 +40,9 @@ bounds_gdf = gpd.read_file(
     INPUT_PATH / "domains" / "downscaling_domains_fixed.geojson", driver="GeoJSON"
 )
 bounds_gdf.head()
+
+# %%
+bounds_gdf
 
 # %%
 city_bounds_gdf = bounds_gdf[bounds_gdf["city"] == CITY_NAME].copy()
@@ -64,8 +68,8 @@ ds_grid
 # ### Align SRTM
 
 # %%
-elev_ds = xr.open_dataset(INPUT_PATH / "dem" / f"SRTM_{CITY_NAME}.tiff")
-elev_ds = elev_ds.rename({"x": "lon", "y": "lat"})
+# elev_ds = xr.open_dataset(INPUT_PATH / "dem" / f"SRTM_{CITY_NAME}.tiff")
+elev_ds = xr.open_dataset(INPUT_PATH / "srtm" / f"SRTM_{CITY_NAME}.nc")
 elev_ds
 
 # %%
@@ -74,7 +78,9 @@ elev_regridder
 
 # %%
 elev_regridded_ds = elev_regridder(elev_ds, keep_attrs=True)
-elev_regridded_ds = elev_regridded_ds.rename_vars({"band_data": "elevation"})
+elev_regridded_ds = elev_regridded_ds.rename_vars(
+    {list(elev_regridded_ds.data_vars)[0]: "elevation"}
+)
 elev_regridded_ds
 
 # %%
@@ -89,13 +95,14 @@ elev_regridded_ds.to_netcdf(
     DEST_PATH / "input" / f"srtm_regridded_{CITY_NAME.lower()}.nc", engine="scipy"
 )
 
+# %%
+elev_regridded_ds
+
+
 # %% [markdown]
 # ## Align NDVI
 
 # %%
-from functools import partial
-
-
 def _preprocess(ds, lon_bnds, lat_bnds):
     return ds.sel(x=slice(*lon_bnds), y=slice(*lat_bnds))
 
@@ -211,7 +218,8 @@ lon_bnds, lat_bnds = (
     (lat0 - CROP_ALLOWANCE_DEG, lat1 + CROP_ALLOWANCE_DEG),
 )
 partial_func = partial(_preprocess, lon_bnds=lon_bnds, lat_bnds=lat_bnds)
-chirts_fns = list((INPUT_PATH / "chirts").glob(f"CHIRTS_Tmax_PH_{YEAR}*.nc"))
+# chirts_fns = list((INPUT_PATH / "chirts").glob(f"CHIRTS_Tmax_PH_{YEAR}*.nc"))
+chirts_fns = list((INPUT_PATH / "chirts").glob("CHIRTS_Tmax_PH_*.nc"))
 ds = xr.open_mfdataset(chirts_fns, preprocess=partial_func)
 chirts_tmax_ds = ds.rename({"longitude": "lon", "latitude": "lat"})
 chirts_tmax_ds
@@ -222,7 +230,7 @@ lon_bnds, lat_bnds = (
     (lat0 - CROP_ALLOWANCE_DEG, lat1 + CROP_ALLOWANCE_DEG),
 )
 partial_func = partial(_preprocess, lon_bnds=lon_bnds, lat_bnds=lat_bnds)
-chirts_fns = list((INPUT_PATH / "chirts").glob(f"CHIRTS_Tmin_PH_{YEAR}*.nc"))
+chirts_fns = list((INPUT_PATH / "chirts").glob("CHIRTS_Tmin_PH_*.nc"))
 ds = xr.open_mfdataset(chirts_fns, preprocess=partial_func)
 chirts_tmin_ds = ds.rename({"longitude": "lon", "latitude": "lat"})
 chirts_tmin_ds
@@ -269,7 +277,8 @@ lon_bnds, lat_bnds = (
     (lat0 - CROP_ALLOWANCE_DEG, lat1 + CROP_ALLOWANCE_DEG),
 )
 partial_func = partial(_preprocess, lon_bnds=lon_bnds, lat_bnds=lat_bnds)
-chirps_fns = list((INPUT_PATH / "chirps").glob(f"CHIRPS_PH_{YEAR}*.nc"))
+# chirps_fns = list((INPUT_PATH / "chirps").glob(f"CHIRPS_PH_{YEAR}*.nc"))
+chirps_fns = list((INPUT_PATH / "chirps").glob("CHIRPS_PH_*.nc"))
 ds = xr.open_mfdataset(chirps_fns, preprocess=partial_func)
 chirps_ds = ds.rename({"longitude": "lon", "latitude": "lat"})
 chirps_ds
@@ -291,6 +300,28 @@ chirps_regridded_ds.isel(time=100)["precip"].plot()
 # %%
 chirps_regridded_ds.to_netcdf(
     DEST_PATH / "input" / f"chirps_regridded_{CITY_NAME.lower()}.nc", engine="scipy"
+)
+
+# %% [markdown]
+# ## Merge CHIRTS and CHIRPS
+
+# %%
+all_ds = xr.merge(
+    [
+        chirts_regridded_ds,
+        chirps_regridded_ds,
+        elev_regridded_ds,
+    ]
+)
+all_ds
+
+# %%
+all_ds.isel(time=1)
+
+# %%
+all_ds.to_netcdf(
+    DEST_PATH / "input" / f"chirts_chirps_regridded_{CITY_NAME.lower()}.nc",
+    engine="scipy",
 )
 
 # %% [markdown]

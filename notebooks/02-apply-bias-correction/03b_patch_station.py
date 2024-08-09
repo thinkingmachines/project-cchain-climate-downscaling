@@ -26,9 +26,12 @@ import xarray as xr
 # Util imports
 sys.path.append("../../")
 
+# %% [markdown]
+# # Combine gridded data from multiple stations with different time ranges
+
 # %%
 PROCESSED_PATH = Path("../../data/02-processed")
-CORRECTED_PATH = PROCESSED_PATH / "bias-correction-optimized"
+CORRECTED_PATH = PROCESSED_PATH / "bias-correction-radial-optimized"
 
 # %%
 city_names = [
@@ -39,16 +42,16 @@ city_names = [
 ds = xr.concat(
     [
         xr.open_dataset(
-            CORRECTED_PATH / f"corrected_subset_{city_names[0].lower()}.nc"
+            CORRECTED_PATH / f"corrected_gridded_{city_names[0].lower()}.nc"
         ),
         xr.open_dataset(
-            CORRECTED_PATH / f"corrected_subset_{city_names[1].lower()}.nc"
+            CORRECTED_PATH / f"corrected_gridded_{city_names[1].lower()}.nc"
         ),
     ],
     dim="time",
 )
 ds.to_netcdf(
-    CORRECTED_PATH / f"corrected_subset_{city_names[0].split('_')[0].lower()}.nc",
+    CORRECTED_PATH / f"corrected_gridded_{city_names[0].split('_')[0].lower()}.nc",
     engine="scipy",
 )
 ds

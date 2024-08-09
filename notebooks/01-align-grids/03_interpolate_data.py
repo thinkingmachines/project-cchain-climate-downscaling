@@ -7,7 +7,7 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.16.0
 #   kernelspec:
-#     display_name: climate-downscaling
+#     display_name: Python 3 (ipykernel)
 #     language: python
 #     name: python3
 # ---
@@ -26,15 +26,16 @@ import cartopy.crs as ccrs
 INPUT_PATH = Path("../../data/02-processed")
 RESOLUTION = 0.02  # 2 km
 CROP_ALLOWANCE_DEG = 13 * RESOLUTION
-CITY_NAME = "Dagupan"
-YEAR = 2007
+CITY_NAME = "Davao"
+YEAR = 2008
+VARIABLES = "chirts_chirps"
 
 # %% [markdown]
 # ## Read aligned file
 
 # %%
 input_ds = xr.open_dataset(
-    INPUT_PATH / "input" / f"all_vars_regridded_{CITY_NAME.lower()}.nc"
+    INPUT_PATH / "input" / f"{VARIABLES}_regridded_{CITY_NAME.lower()}.nc"
 )
 input_ds
 
@@ -69,7 +70,7 @@ input_regridded_ds
 
 # %%
 input_regridded_ds.to_netcdf(
-    INPUT_PATH / "input" / f"all_vars_regridded_interpolated_{CITY_NAME.lower()}.nc",
+    INPUT_PATH / "input" / f"{VARIABLES}_regridded_interpolated_{CITY_NAME.lower()}.nc",
     engine="scipy",
 )
 

@@ -7,7 +7,7 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.16.0
 #   kernelspec:
-#     display_name: climate-downscaling
+#     display_name: Python 3 (ipykernel)
 #     language: python
 #     name: python3
 # ---

@@ -1,26 +1,19 @@
 repos:
   - repo: https://github.com/mwouts/jupytext
-    rev: v1.13.1  # CURRENT_TAG/COMMIT_HASH
+    rev: v1.16.0  # CURRENT_TAG/COMMIT_HASH
     hooks:
     - id: jupytext
-      args: [--from, ipynb, --to, "py:percent", --pipe, black, --pipe, "isort - --profile black"]
+      args: [--from, ipynb, --to, "py:percent"]
       stages:
         - commit
       additional_dependencies:
         - jupytext
-        - black
-        - isort
-  - repo: https://github.com/psf/black
-    rev: 22.3.0
-    hooks:
-      - id: black-jupyter
-        language_version: python3
+        - ruff
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.0.1
     hooks:
       # list of supported hooks: https://pre-commit.com/hooks.html
-      - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-added-large-files
       - id: detect-private-key
@@ -29,14 +22,14 @@ repos:
       - id: mixed-line-ending
         args: [ "--fix=lf" ]
 
-  - repo: https://github.com/psf/black
-    rev: 22.3.0
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    # Ruff version.
+    rev: v0.3.5
     hooks:
-      - id: black
-        language_version: python3
-
-  - repo: https://github.com/pycqa/isort
-    rev: 5.12.0
-    hooks:
-      - id: isort
-        args: ['--profile', 'black']
+      # Run the linter.
+      - id: ruff
+        types_or: [ pyi, jupyter ]
+        args: [ --fix ]
+      # Run the formatter.
+      - id: ruff-format
+        types_or: [ pyi, jupyter ]

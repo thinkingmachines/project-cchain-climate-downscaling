@@ -30,7 +30,7 @@ With support from the Lacuna Fund, we are able to create this code that allows u
 # ⚠️ For data users: Using the provided output
 The model yielded minimum temperature, maximum temperature and rainfall with enhanced resolution from the reanalysis scale (0.25°) to local scale (0.02°). However, given the uncertainties/biases in the magnitude of the downscaled temperature and rainfall, we advise users not to treat the output the way they would treat ground-measured data (e.g. station data) but focus on its bulk statistical characteristics (distribution, timing, spatial pattern) instead.
 
-While we provide the full downscaled output as gridded netcdf files [here](https://drive.google.com/drive/u/0/folders/1mXaFEhMYZnLzUCX3RciK5JEmguf_UHdd) for all the 12 cities, only those variables that passed our quality checks (QC) are included in the extracted data. These are the following:
+While we provide the downscaled climate data output of all the 12 cities as gridded netcdf files [here](https://drive.google.com/drive/u/0/folders/1mXaFEhMYZnLzUCX3RciK5JEmguf_UHdd), only those variables that passed our quality checks (QC) are included in the extracted data tables available for download in our [project site](https://thinkingmachines.github.io/project-cchain). These are the following:
 
 | **City**       | tmin | tmax | pr |
 |----------------|------|------|----|
@@ -47,7 +47,7 @@ While we provide the full downscaled output as gridded netcdf files [here](https
 | Tacloban       | ✓    | ✓    | ✓  |
 | Zamboanga      | ✓    | ✓    | ✓  |
 
-You may view a more detailed showcase of results here in these [slides](https://docs.google.com/presentation/d/1y8mAa07aC7loeY2e5Oqicy98hxFag6kUhyAp8Qp59U4/). If you are uncertain, consider using the coarse data provided in the [climate_atmosphere](https://dbdocs.io/lacuna-fund-project-team/Project-CCHAIN?table=climate_atmosphere&schema=public&view=table_structure) table instead.
+You may view a more detailed showcase of results here in these [slides](https://docs.google.com/presentation/d/1y8mAa07aC7loeY2e5Oqicy98hxFag6kUhyAp8Qp59U4/). If you are uncertain, consider using the climate data from coarser data sources provided in the [climate_atmosphere](https://dbdocs.io/lacuna-fund-project-team/Project-CCHAIN?table=climate_atmosphere&schema=public&view=table_structure) table instead.
 
 # ⚙️ Local Setup for Development
 

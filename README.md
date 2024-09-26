@@ -1,6 +1,6 @@
 <div align="center">
 
-# Lacuna Fund Climate Downscaling
+# Project CCHAIN - Deep learning climate downscaling model
 
 </div>
 
@@ -13,11 +13,41 @@
 
 # 📜 Description
 
-This repo sets up the local environment to improve existing climate data (temperature and rainfall) of the Lacuna fund linked dataset using ML methods.
+The [Project CCHAIN dataset](https://thinkingmachines.github.io/project-cchain) contains daily climate variables over 12 Philippine cities that were designed to be used in health and other applied research. However, the values are from coarse global gridded data and are not resolved for barangay level (village level in the Philippines). 
+
+Computational methods called **climate downscaling** addresses this issue by using simulations or statistical processes to increase the resolution of coarse climate data. A technique called *dynamical climate downscaling* uses physics equations simulating large-scale atmospheric systems to approximate a desired finer resolution. However, this method takes large computational resources, both on hardware and runtime. Recent advances in the past decade has allowed machine learning models to help push downscaling forward by detecting and transferring patterns from available high resolution data (e.g. from weather stations, radar) to correct coarse resolution data. The end result is also higher resolution climate data but produced significantly faster and requires less resources. 
+
+Open source machine learning models that downscale climate data have been developed by leading institutions in developed nations. One such model is [dl4ds](https://www.cambridge.org/core/journals/environmental-data-science/article/dl4dsdeep-learning-for-empirical-downscaling/5D0623A860C6082FD650D704A50BEF3D),  a python module that implements range of architechtures for downscaling gridded  data with deep neural networks (Gonzales 2023).
+
+![Sample](assests/tmax_CagayanDeOro_2016-01-20_comparison.png?raw=true "Sample downscaled maximum temperature for Cagayan De Oro City")
+
+With support from the Lacuna Fund, we are able to create this code that allows us to improve the resolution of the currently provided temperature and rainfall data to bring it down to the local level. It is our hope that local developers can use, contribute and grow this code base to add more capabilities that may be useful to our stakeholders
+
 
 <br/>
 <br/>
 
+# ⚠️ For data users: Using the provided output
+The model yielded minimum temperature, maximum temperature and rainfall with enhanced resolution from the reanalysis scale (0.25°) to local scale (0.02°). However, given the uncertainties/biases in the magnitude of the downscaled temperature and rainfall, we advise users not to treat the output the way they would treat ground-measured data (e.g. station data) but focus on its bulk statistical characteristics (distribution, timing, spatial pattern) instead.
+
+While we provide the full downscaled output as gridded netcdf files [here](https://drive.google.com/drive/u/0/folders/1mXaFEhMYZnLzUCX3RciK5JEmguf_UHdd) for all the 12 cities, only those variables that passed our quality checks (QC) are included in the extracted data. These are the following:
+
+| **City**       | tmin | tmax | pr |
+|----------------|------|------|----|
+| Palayan        | ✓    | ✓    | ✓  |
+| Dagupan        | ✓    | ✓    | ✓  |
+| Davao          |      | ✓    | ✓  |
+| Cagayan De Oro |      | ✓    | ✓  |
+| Iloilo         | ✓    | ✓    |    |
+| Legazpi        |      |      | ✓  |
+| Mandaue        | ✓    |      | ✓  |
+| Muntinlupa     |      | ✓    | ✓  |
+| Navotas        |      | ✓    | ✓  |
+| Mandaluyong    |      | ✓    | ✓  |
+| Tacloban       | ✓    | ✓    | ✓  |
+| Zamboanga      | ✓    | ✓    | ✓  |
+
+You may view a more detailed showcase of results here in these [slides](https://docs.google.com/presentation/d/1y8mAa07aC7loeY2e5Oqicy98hxFag6kUhyAp8Qp59U4/). If you are uncertain, consider using the coarse data provided in the [climate_atmosphere](https://dbdocs.io/lacuna-fund-project-team/Project-CCHAIN?table=climate_atmosphere&schema=public&view=table_structure) table instead.
 
 # ⚙️ Local Setup for Development
 

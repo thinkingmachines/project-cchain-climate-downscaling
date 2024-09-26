@@ -309,3 +309,28 @@ def custom_replace(
     out = flat.copy()
     out[replaceable] = replacement[index[replaceable]]
     return da.copy(data=out.reshape(da.shape))
+
+def apply_filter(ds: xr.Dataset, var_name: str, window: int) -> xr.Dataset:
+    """
+    Perform 2D spatial smoothing on an xarray dataset using a simple rolling mean over a 3x3 grid.
+
+    Parameters:
+    ds (xr.Dataset): The input xarray dataset.
+    var_name (str): The variable name within the dataset to be smoothed.
+    window (int): The size of the smoothing window. Default is 3 for a 3x3 grid.
+
+    Returns:
+    xr.Dataset: The smoothed xarray dataset.
+    """
+    # Ensure the window size is odd and at least 3
+    if window < 3 or window % 2 == 0:
+        raise ValueError("Window size must be an odd integer greater than or equal to 3.")
+    
+    # Apply rolling mean on the variable
+    smoothed = ds[var_name].rolling(dim={'lat': window, 'lon': window}, center=True, min_periods=1).mean()
+    
+    # Create a new dataset with the smoothed variable
+    smoothed_ds = ds.copy()
+    smoothed_ds[var_name] = smoothed
+    
+    return smoothed_ds

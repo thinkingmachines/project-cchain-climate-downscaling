@@ -19,7 +19,7 @@ Computational methods called **climate downscaling** addresses this issue by usi
 
 Open source machine learning models that downscale climate data have been developed by leading institutions in developed nations. One such model is [dl4ds](https://www.cambridge.org/core/journals/environmental-data-science/article/dl4dsdeep-learning-for-empirical-downscaling/5D0623A860C6082FD650D704A50BEF3D),  a python module that implements range of architechtures for downscaling gridded  data with deep neural networks (Gonzales 2023).
 
-![Sample](assests/tmax_CagayanDeOro_2016-01-20_comparison.png?raw=true "Sample downscaled maximum temperature for Cagayan De Oro City")
+![Sample](assets/tmax_CagayanDeOro_2016-01-20_comparison.png?raw=true "Sample downscaled maximum temperature for Cagayan De Oro City")
 
 With support from the Lacuna Fund, we are able to create this code that allows us to improve the resolution of the currently provided temperature and rainfall data to bring it down to the local level. It is our hope that local developers can use, contribute and grow this code base to add more capabilities that may be useful to our stakeholders
 

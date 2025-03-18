@@ -38,8 +38,8 @@ While we provide the downscaled climate data output of all the 12 cities as grid
 | Dagupan        | ✓    | ✓    | ✓  |
 | Davao          |      | ✓    | ✓  |
 | Cagayan De Oro |      | ✓    | ✓  |
-| Iloilo         | ✓    | ✓    |    |
-| Legazpi        |      |      | ✓  |
+| Iloilo         | ✓    | ✓    | ✓  |
+| Legazpi        |      |      |    |
 | Mandaue        | ✓    |      | ✓  |
 | Muntinlupa     |      | ✓    | ✓  |
 | Navotas        |      | ✓    | ✓  |
